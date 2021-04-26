@@ -1,1 +1,1 @@
-# finsh-project-with-mysql
+# finish-project-with-mysql
