@@ -33,7 +33,59 @@ router.get("/all-cards", async (req, res) => {
         res.status(500).send(err);
       }
       if (result) {
-        res.send(result);
+        const {
+          card_id,
+          biz_name,
+          biz_category,
+          biz_phone,
+          biz_address,
+          biz_logo,
+          biz_description,
+          user_id,
+        } = result;
+        sql.query(
+          `SELECT * FROM open_hours WHERE by_card = ? `,
+          [card_id],
+          (err_open_hours, open_hours) => {
+            if (err_open_hours) {
+              res.status(500).send(err);
+            }
+            if (open_hours) {
+              const {
+                day_1,
+                day_2,
+                day_3,
+                day_4,
+                day_5,
+                day_6,
+                day_7,
+                day_8,
+                by_card,
+              } = open_hours;
+              res.send({
+                card_id,
+                biz_name,
+                biz_category,
+                biz_phone,
+                biz_address,
+                biz_logo,
+                biz_description,
+                open_hours: {
+                  day_1,
+                  day_2,
+                  day_3,
+                  day_4,
+                  day_5,
+                  day_6,
+                  day_7,
+                  day_8,
+                  by_card,
+                },
+                user_id,
+              });
+            }
+          }
+        );
       }
     }
   );
@@ -52,7 +104,59 @@ router.get("/:id", async (req, res) => {
           res.status(500).send(err);
         }
         if (result) {
-          res.send(result);
+          const {
+            card_id,
+            biz_name,
+            biz_category,
+            biz_phone,
+            biz_address,
+            biz_logo,
+            biz_description,
+            user_id,
+          } = result;
+          sql.query(
+            `SELECT * FROM open_hours WHERE by_card = ? `,
+            [card_id],
+            (err_open_hours, open_hours) => {
+              if (err_open_hours) {
+                res.status(500).send(err);
+              }
+              if (open_hours) {
+                const {
+                  day_1,
+                  day_2,
+                  day_3,
+                  day_4,
+                  day_5,
+                  day_6,
+                  day_7,
+                  day_8,
+                  by_card,
+                } = open_hours;
+                res.send({
+                  card_id,
+                  biz_name,
+                  biz_category,
+                  biz_phone,
+                  biz_address,
+                  biz_logo,
+                  biz_description,
+                  open_hours: {
+                    day_1,
+                    day_2,
+                    day_3,
+                    day_4,
+                    day_5,
+                    day_6,
+                    day_7,
+                    day_8,
+                    by_card,
+                  },
+                  user_id,
+                });
+              }
+            }
+          );
         }
       }
     );
@@ -78,9 +182,10 @@ router.put("/:id", auth, async (req, res) => {
       biz_address,
       biz_logo,
       biz_description,
+      open_hours,
     } = req.body;
     sql.query(
-      `UPDATE cards SET biz_name = ?,biz_category = ?,biz_phone = ?,biz_address = ?,biz_logo = ?,biz_description = ? WHERE user_id = ?`,
+      `UPDATE cards SET biz_name = ?,biz_category = ?,biz_phone = ?,biz_address = ?,biz_logo = ?,biz_description = ? WHERE card_id = ? AND user_id = ?`,
       [
         biz_name,
         biz_category,
@@ -88,6 +193,7 @@ router.put("/:id", auth, async (req, res) => {
         biz_address,
         biz_logo,
         biz_description,
+        req.params.id,
         req.user?.user_id,
       ],
       (err, result) => {
@@ -95,7 +201,42 @@ router.put("/:id", auth, async (req, res) => {
           res.status(500).send(err);
         }
         if (result) {
-          res.send(result);
+          if (open_hours) {
+            const {
+              day_1,
+              day_2,
+              day_3,
+              day_4,
+              day_5,
+              day_6,
+              day_7,
+              day_8,
+            } = open_hours;
+            sql.query(
+              `UPDATE open_hours SET day_1 = ?,day_2 = ?,day_3 = ?,day_4 = ?,day_5 = ?,day_6 = ?,day_7 = ?,day_8 = ? WHERE by_card = ?`,
+              [
+                day_1,
+                day_2,
+                day_3,
+                day_4,
+                day_5,
+                day_6,
+                day_7,
+                day_8,
+                req.params.id,
+              ],
+              (err_open_hours, open_hours_result) => {
+                if (err_open_hours) {
+                  console.log(err_open_hours);
+                  res.status(500).send(err_open_hours);
+                }
+                if (open_hours_result) {
+                  res.send("card is bin updated");
+                }
+              }
+            );
+          }
+          res.send("card is bin updated");
         }
       }
     );
@@ -153,6 +294,21 @@ router.post("/:id/upload-img", auth, async (req, res) => {
   }
 });
 
+router.get("/:id/images", (req, res) => {
+  sql.query(
+    `SELECT image_path FROM card_images WHERE by_card = ?`,
+    [req.params.id],
+    (err, result) => {
+      if (err) {
+        res.status(500).send(err);
+      }
+      if (result) {
+        res.send(result);
+      }
+    }
+  );
+});
+
 /***
  * this route is to delete a card by its id
  */
@@ -167,7 +323,19 @@ router.delete("/:id", auth, async (req, res) => {
           return res.status(500).send(err);
         }
         if (result) {
-          res.send(`card with gibeon id is bin deleted successfully`);
+          sql.query(
+            `DELETE FROM open_hours WHERE by_card = ?`,
+            [req.params.id],
+            (err_open_hours, open_hours_result) => {
+              if (err_open_hours) {
+                console.log(err_open_hours);
+                res.status(500).send(err_open_hours);
+              }
+              if (open_hours_result) {
+                res.send(`card with gibeon id is bin deleted successfully`);
+              }
+            }
+          );
         }
       }
     );
